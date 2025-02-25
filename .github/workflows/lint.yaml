@@ -1,0 +1,59 @@
+---
+
+name: Lint
+
+"on":
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run on the 10th of each month at noon.
+    - cron: "00 12 10 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  test:
+    name: lint
+    runs-on: ubuntu-latest
+
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: true
+      matrix:
+        python: ["3.10", "3.x"]
+        ansible: ["9", "latest"]
+        experimental: [false]
+        include:
+          - python: "3.x"
+            ansible: "9"
+            experimental: true
+        exclude:
+          - python: "3.x"
+            ansible: "9"
+            experimental: false
+
+    steps:
+      - name: Check out the codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ matrix.python }}"
+          cache: "pip"
+          cache-dependency-path: .requirements/${{ matrix.ansible }}.txt
+
+      - name: Install/upgrade pip, wheel
+        run: pip install --upgrade pip wheel
+
+      - name: Install test dependencies
+        id: deps
+        run: pip install -r .requirements/${{ matrix.ansible }}.txt
+
+      - name: Run ansible-lint
+        run: ansible-lint
