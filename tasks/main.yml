@@ -1,0 +1,22 @@
+---
+- name: Create custom config for systemd-journald
+  when:
+    - systemd_journald is defined
+    - systemd_journald != None
+    - systemd_journald | length > 0
+  block:
+    - name: Create systemd-journald config directory
+      ansible.builtin.file:
+        path: "/etc/systemd/journald.conf.d"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+    - name: Create override file for systemd-journald config
+      ansible.builtin.template:
+        src: journald.conf.d.j2
+        dest: "/etc/systemd/journald.conf.d/override.conf"
+        mode: "0644"
+        owner: root
+        group: root
+      notify: Restart systemd-journald service
